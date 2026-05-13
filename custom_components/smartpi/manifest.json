@@ -2,11 +2,11 @@
   "domain": "smartpi",
   "name": "SmartPi",
   "version": "1.0.0",
-  "documentation": "https://github.com/nDenerserve/SmartPi",
-  "issue_tracker": "https://github.com/nDenerserve/SmartPi/issues",
+  "documentation": "https://github.com/nDenerserve/SmartPi-API-Home-Assistant-Integration",
+  "issue_tracker": "https://github.com/nDenerserve/SmartPi-API-Home-Assistant-Integration/issues",
   "requirements": [],
   "dependencies": [],
-  "codeowners": [],
+  "codeowners": ["@nDenerserve"],
   "iot_class": "local_polling",
   "config_flow": true
 }

@@ -1,5 +1,9 @@
 # SmartPi — Home Assistant Integration
 
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+[![GitHub Release](https://img.shields.io/github/release/nDenerserve/SmartPi-API-Home-Assistant-Integration.svg)](https://github.com/nDenerserve/SmartPi-API-Home-Assistant-Integration/releases)
+[![Validate](https://github.com/nDenerserve/SmartPi-API-Home-Assistant-Integration/actions/workflows/validate.yml/badge.svg)](https://github.com/nDenerserve/SmartPi-API-Home-Assistant-Integration/actions/workflows/validate.yml)
+
 A custom Home Assistant integration for the **SmartPi AC** energy meter by [enerserve GmbH](https://www.enerserve.eu). It connects to the device's local REST API and exposes live electrical measurements as Home Assistant entities.
 
 ---
@@ -29,10 +33,11 @@ No additional Python packages are required — the integration uses the aiohttp 
 
 ### Option B — HACS (recommended for updates)
 
-1. Add this repository as a custom repository in HACS (type: **Integration**).
-2. Install the **SmartPi** integration from HACS.
-3. Restart Home Assistant.
-4. Go to **Settings → Devices & Services → Add Integration** and search for **SmartPi**.
+1. In HACS, go to **Integrations → ⋮ → Custom repositories**.
+2. Add `https://github.com/nDenerserve/SmartPi-API-Home-Assistant-Integration` as type **Integration**.
+3. Install the **SmartPi** integration from HACS.
+4. Restart Home Assistant.
+5. Go to **Settings → Devices & Services → Add Integration** and search for **SmartPi**.
 
 ---
 

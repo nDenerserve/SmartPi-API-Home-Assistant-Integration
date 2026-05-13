@@ -4,6 +4,20 @@ All notable changes to the SmartPi Home Assistant Integration are documented her
 
 ---
 
+## [1.0.1] — 2026-05-13
+
+### Changed
+
+- `manifest.json`: corrected `documentation` and `issue_tracker` URLs to point to this repository; added `@nDenerserve` to `codeowners`.
+- `README.md`: added HACS, release, and CI status badges; expanded HACS installation instructions with the concrete repository URL.
+
+### Added
+
+- `hacs.json`: HACS integration descriptor enabling installation as a custom HACS repository.
+- `.github/workflows/validate.yml`: GitHub Actions workflow that runs the official HACS validation action on every push to `main`, pull request, and published release.
+
+---
+
 ## [1.0.0] — 2026-05-13
 
 ### Added

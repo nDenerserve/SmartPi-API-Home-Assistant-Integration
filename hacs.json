@@ -1,0 +1,6 @@
+{
+  "name": "SmartPi",
+  "content_type": "integration",
+  "render_readme": true,
+  "homeassistant": "2024.1"
+}

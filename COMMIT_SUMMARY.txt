@@ -1,116 +1,47 @@
 ================================================================================
-  COMMIT SUMMARY — SmartPi Home Assistant Integration v1.0.0
+  COMMIT SUMMARY — SmartPi Home Assistant Integration v1.0.1
   Date: 2026-05-13
 ================================================================================
 
 COMMIT TITLE
 ------------
-feat: initial release of SmartPi HA integration (v1.0.0)
-
-
-SCOPE OF CHANGES
-----------------
-This commit represents the first complete, production-ready release of the
-SmartPi custom integration for Home Assistant. It covers all source files,
-branding assets, documentation, and configuration.
+feat: add HACS compatibility (hacs.json, validate workflow, manifest fixes)
 
 
 CHANGED FILES
 -------------
 
-custom_components/smartpi/__init__.py
-  - Entry setup and teardown logic
-  - Platform forwarding for sensor, number, switch, select
-  - Options-change listener that triggers integration reload
-
-custom_components/smartpi/coordinator.py
-  - DataUpdateCoordinator polling /livedata every 30 s
-  - JWT authentication with automatic token refresh on 401
-  - Unified data dict keyed by (phase, measurement_type)
-  - Read/write access to SmartPi AC config and main config
-  - English docstrings added to all methods
-
-custom_components/smartpi/config_flow.py
-  - Config flow: host, port, optional credentials, duplicate detection
-  - Re-authentication flow for credential updates
-  - Options flow with three sections:
-      - Sensor selection (stored in HA options, triggers reload)
-      - Device settings: name, GPS, log level (written to device)
-      - AC settings: power frequency, sample rate, integrator
-  - Measurement labels translated to English
-  - English docstrings added throughout
-
-custom_components/smartpi/sensor.py
-  - Read-only sensor entities for 8 per-phase measurement types
-  - Total power sensor from the separate /livepower endpoint
-  - Sensor descriptions updated with English value_label strings
-  - English docstrings added
-
-custom_components/smartpi/number.py
-  - Per-phase number entities for calibration and hardware parameters
-  - Entities for phases 1–4: current calibration, CT primary current,
-    GUI max current
-  - Entities for phases 1–3 only: reference voltage, voltage calibration
-  - Entity names translated to English
-  - English docstrings added
-
-custom_components/smartpi/switch.py
-  - Per-phase switch entities to enable/disable measurement channels
-  - Phases 1–4: measure current, invert current direction
-  - Phases 1–3: measure voltage
-  - Entity names translated to English
-  - English docstrings added
-
-custom_components/smartpi/select.py
-  - Per-phase select entity for current transformer type
-  - Dynamically adds unknown device values to the options list
-  - Entity names translated to English
-  - English docstrings added
-
-custom_components/smartpi/const.py
-  - All constants documented with inline English comments
-  - No functional changes
-
-custom_components/smartpi/brand/icon.png  [NEW]
-custom_components/smartpi/brand/logo.png  [NEW]
-  - Integration branding images added using the HA 2026.3+ brands proxy API
-  - Icons are served locally by HA from the brand/ directory without CDN
-  - Replaces the previous workaround of manually copying files to the
-    HA brands cache
-
-README.md  [NEW]
-  - Full installation guide (manual and HACS)
-  - Entity reference table for all sensor, number, switch, and select entities
-  - Options flow documentation
-  - Integration architecture overview
-  - Troubleshooting section
-
-CHANGELOG.md  [NEW]
-  - Complete change log for v1.0.0
-
-COMMIT_SUMMARY.txt  [NEW]
-  - This file
+  [NEW]     hacs.json
+  [NEW]     .github/workflows/validate.yml
+  [CHANGED] custom_components/smartpi/manifest.json
+  [CHANGED] README.md
+  [CHANGED] CHANGELOG.md
 
 
-NOTABLE DECISIONS
------------------
-1. Credentials are optional. The integration works in read-only mode (sensor
-   data only) without a username or password. Configuration entities require
-   credentials and are skipped at setup if the AC config cannot be loaded.
+DETAILS
+-------
 
-2. All configuration entities are disabled by default. This avoids cluttering
-   the device page for users who only need sensor data.
+hacs.json (new)
+  Required descriptor file for HACS. Declares the integration under the name
+  "SmartPi", sets the content type to "integration", and enables README
+  rendering as the project description inside HACS.
 
-3. Config writes use a two-step pattern: update the in-memory cache first,
-   then write the entire config object back to the device. This matches the
-   SmartPi API's bulk-write semantics and avoids partial updates.
+.github/workflows/validate.yml (new)
+  GitHub Actions workflow using the official hacs/action. Runs on every push
+  to main, on pull requests, and on published releases. Automatically verifies
+  that the repository meets all HACS requirements.
 
-4. The total-power value comes from a separate /livepower endpoint. If this
-   endpoint fails (e.g. when a reverse proxy returns HTML instead of JSON),
-   the error is logged at DEBUG level and the sensor simply has no value for
-   that poll cycle.
+custom_components/smartpi/manifest.json (changed)
+  - "documentation" and "issue_tracker" now correctly point to this repository
+    (previously pointed to the general SmartPi repo).
+  - "codeowners" added with "@nDenerserve".
 
-5. The unique ID is the device serial number. If no serial is returned by the
-   device (firmware edge case), the config entry ID is used as a fallback.
+README.md (changed)
+  - Added status badges for HACS, GitHub Release, and CI validation.
+  - Expanded HACS installation instructions with the concrete repository URL
+    and a precise step-by-step guide.
+
+CHANGELOG.md (changed)
+  Prepended new section [1.0.1] documenting these changes.
 
 ================================================================================
