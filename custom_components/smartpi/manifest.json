@@ -1,7 +1,7 @@
 {
   "domain": "www.enerserve.eu",
   "name": "SmartPi",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "documentation": "https://github.com/nDenerserve/SmartPi-API-Home-Assistant-Integration",
   "issue_tracker": "https://github.com/nDenerserve/SmartPi-API-Home-Assistant-Integration/issues",
   "requirements": [],

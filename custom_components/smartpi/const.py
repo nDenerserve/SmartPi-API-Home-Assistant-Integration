@@ -15,8 +15,9 @@ API_MAIN_CONFIG_WRITE = "/api/v1/config/writesmartpiconfiguration"
 API_AC_CONFIG_READ = "/api/v1/config/readsmartpiacconfiguration"
 API_AC_CONFIG_WRITE = "/api/v1/config/writesmartpiacconfiguration"
 
-# Options-flow key used to store the user's sensor selection in HA
+# Options-flow keys stored in HA (not written to the device)
 CONF_ENABLED_MEASUREMENTS = "enabled_measurements"
+CONF_SCAN_INTERVAL = "scan_interval"
 
 # Per-phase measurement types returned by the livedata endpoint
 MEASUREMENT_TYPES = [

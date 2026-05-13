@@ -48,9 +48,13 @@
       },
       "sensors": {
         "title": "Sensor Selection",
-        "description": "Choose which measurements should be shown in Home Assistant.",
+        "description": "Choose which measurements should be shown in Home Assistant and set the polling interval.",
         "data": {
-          "enabled_measurements": "Active measurements"
+          "enabled_measurements": "Active measurements",
+          "scan_interval": "Polling interval (seconds)"
+        },
+        "data_description": {
+          "scan_interval": "How often Home Assistant fetches new values from the SmartPi (5–300 s, default: 30 s)"
         }
       },
       "grundeinstellungen": {

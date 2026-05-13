@@ -27,6 +27,7 @@ from .const import (
     API_LOGIN,
     API_MAIN_CONFIG_READ,
     API_MAIN_CONFIG_WRITE,
+    CONF_SCAN_INTERVAL,
     DEFAULT_PORT,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -47,11 +48,12 @@ class SmartPiCoordinator(DataUpdateCoordinator[dict[tuple[int, str], dict[str, A
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         """Initialise the coordinator with connection parameters from the config entry."""
+        scan_interval = entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         super().__init__(
             hass,
             _LOGGER,
             name=f"{DOMAIN}_{entry.entry_id}",
-            update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
+            update_interval=timedelta(seconds=scan_interval),
         )
         self._host = entry.data[CONF_HOST]
         self._port = entry.data.get(CONF_PORT, DEFAULT_PORT)

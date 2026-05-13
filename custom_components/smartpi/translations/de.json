@@ -48,9 +48,13 @@
       },
       "sensors": {
         "title": "Sensor-Auswahl",
-        "description": "Wählen Sie aus, welche Messwerte in Home Assistant angezeigt werden sollen.",
+        "description": "Wählen Sie aus, welche Messwerte in Home Assistant angezeigt werden sollen, und legen Sie das Abfrageintervall fest.",
         "data": {
-          "enabled_measurements": "Aktive Messwerte"
+          "enabled_measurements": "Aktive Messwerte",
+          "scan_interval": "Abfrageintervall (Sekunden)"
+        },
+        "data_description": {
+          "scan_interval": "Wie oft Home Assistant neue Werte vom SmartPi abruft (5–300 s, Standard: 30 s)"
         }
       },
       "grundeinstellungen": {

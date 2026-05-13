@@ -4,6 +4,21 @@ All notable changes to the SmartPi Home Assistant Integration are documented her
 
 ---
 
+## [1.0.2] — 2026-05-13
+
+### Added
+
+- **Configurable polling interval**: The scan interval (how often Home Assistant polls the SmartPi device for new values) can now be set in the options flow under *Sensor Selection*. Valid range: 5–300 seconds, default: 30 seconds. The new setting is stored in the integration's HA options and takes effect after the integration is reloaded (automatically triggered when options are saved).
+
+### Changed
+
+- `const.py`: added `CONF_SCAN_INTERVAL` constant.
+- `coordinator.py`: `SmartPiCoordinator` now reads `scan_interval` from the entry options instead of using the hardcoded `DEFAULT_SCAN_INTERVAL`.
+- `config_flow.py`: `async_step_sensors` extended with a `NumberSelector` for the polling interval (5–300 s, step 5).
+- `translations/en.json`, `translations/de.json`, `strings.json`: added label and description for the new `scan_interval` field.
+
+---
+
 ## [1.0.1] — 2026-05-13
 
 ### Changed

@@ -17,6 +17,9 @@ from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNA
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -27,7 +30,9 @@ from .const import (
     API_LIVEDATA,
     API_LOGIN,
     CONF_ENABLED_MEASUREMENTS,
+    CONF_SCAN_INTERVAL,
     DEFAULT_PORT,
+    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     LOG_LEVELS,
     MEASUREMENT_TYPES,
@@ -232,11 +237,15 @@ class SmartPiOptionsFlow(config_entries.OptionsFlow):
             new_options = {
                 **self.config_entry.options,
                 CONF_ENABLED_MEASUREMENTS: user_input[CONF_ENABLED_MEASUREMENTS],
+                CONF_SCAN_INTERVAL: int(user_input[CONF_SCAN_INTERVAL]),
             }
             return self.async_create_entry(data=new_options)
 
         enabled = self.config_entry.options.get(
             CONF_ENABLED_MEASUREMENTS, ALL_MEASUREMENT_KEYS
+        )
+        scan_interval = self.config_entry.options.get(
+            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
         )
 
         return self.async_show_form(
@@ -253,6 +262,17 @@ class SmartPiOptionsFlow(config_entries.OptionsFlow):
                             ],
                             multiple=True,
                             mode=SelectSelectorMode.LIST,
+                        )
+                    ),
+                    vol.Optional(
+                        CONF_SCAN_INTERVAL, default=scan_interval
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=5,
+                            max=300,
+                            step=5,
+                            unit_of_measurement="s",
+                            mode=NumberSelectorMode.BOX,
                         )
                     ),
                 }
