@@ -1,0 +1,85 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "SmartPi Connection",
+        "description": "Enter the connection details for your SmartPi device. Username and password are optional but required for accessing device configuration (Measurements / Basic Settings).",
+        "data": {
+          "host": "IP Address or Hostname",
+          "port": "Port",
+          "username": "Username",
+          "password": "Password"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the SmartPi (e.g. 192.168.1.100)",
+          "port": "SmartPi web server port (default: 80)",
+          "username": "SmartPi username (optional)",
+          "password": "SmartPi password (optional)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "SmartPi – Re-authenticate",
+        "description": "Enter new credentials for {host}.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect to the SmartPi. Please check the IP address and port.",
+      "invalid_auth": "Invalid username or password.",
+      "unknown": "Unexpected error. Check the logs for details."
+    },
+    "abort": {
+      "already_configured": "This SmartPi device is already configured.",
+      "reauth_successful": "Credentials updated successfully."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure SmartPi",
+        "menu_options": {
+          "sensors": "Sensor Selection",
+          "grundeinstellungen": "Basic Settings",
+          "messungen": "Measurements (global)"
+        }
+      },
+      "sensors": {
+        "title": "Sensor Selection",
+        "description": "Choose which measurements should be shown in Home Assistant.",
+        "data": {
+          "enabled_measurements": "Active measurements"
+        }
+      },
+      "grundeinstellungen": {
+        "title": "SmartPi Basic Settings",
+        "description": "Change basic SmartPi device settings. Requires configured credentials.",
+        "data": {
+          "name": "Device name",
+          "lat": "Latitude",
+          "lng": "Longitude",
+          "loglevel": "Log level"
+        }
+      },
+      "messungen": {
+        "title": "SmartPi Measurements (global)",
+        "description": "Global measurement settings. Per-phase settings are available as separate entities.",
+        "data": {
+          "powerfrequency": "Grid frequency (Hz)",
+          "samplerate": "Sample rate",
+          "integrator": "Enable integrator"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect to the SmartPi.",
+      "write_failed": "Failed to write configuration to SmartPi.",
+      "no_credentials": "No credentials configured. Please add username and password in the integration settings first."
+    },
+    "abort": {
+      "cannot_connect": "Unable to connect to the SmartPi."
+    }
+  }
+}
