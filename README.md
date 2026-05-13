@@ -4,7 +4,7 @@
 [![GitHub Release](https://img.shields.io/github/release/nDenerserve/SmartPi-API-Home-Assistant-Integration.svg)](https://github.com/nDenerserve/SmartPi-API-Home-Assistant-Integration/releases)
 [![Validate](https://github.com/nDenerserve/SmartPi-API-Home-Assistant-Integration/actions/workflows/validate.yml/badge.svg)](https://github.com/nDenerserve/SmartPi-API-Home-Assistant-Integration/actions/workflows/validate.yml)
 
-A custom Home Assistant integration for the **SmartPi AC** energy meter by [enerserve GmbH](https://www.enerserve.eu). It connects to the device's local REST API and exposes live electrical measurements as Home Assistant entities.
+A custom Home Assistant integration for the **SmartPi AC** energy meter by [nD-enerserve GmbH](https://www.enerserve.eu). It connects to the device's local REST API and exposes live electrical measurements as Home Assistant entities.
 
 ---
 
