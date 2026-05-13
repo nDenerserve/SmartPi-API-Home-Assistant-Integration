@@ -1,3 +1,9 @@
+"""Config flow for the SmartPi integration.
+
+Handles initial setup (host, port, optional credentials), re-authentication,
+and the options flow for sensor selection and device configuration.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -40,30 +46,36 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     }
 )
 
+# Human-readable labels shown in the sensor-selection options flow step
 MEASUREMENT_LABELS: dict[str, str] = {
-    "current": "Strom (A)",
-    "voltage": "Spannung (V)",
-    "power": "Wirkleistung (W)",
-    "cosphi": "Leistungsfaktor (cos φ)",
-    "frequency": "Frequenz (Hz)",
-    "energyconsumed": "Bezogene Energie (Wh)",
-    "energyproduced": "Eingespeiste Energie (Wh)",
-    "energybalanced": "Bilanzierte Energie (Wh)",
-    TOTAL_POWER_KEY: "Gesamtleistung (W)",
+    "current": "Current (A)",
+    "voltage": "Voltage (V)",
+    "power": "Active Power (W)",
+    "cosphi": "Power Factor (cos φ)",
+    "frequency": "Frequency (Hz)",
+    "energyconsumed": "Energy Consumed (Wh)",
+    "energyproduced": "Energy Produced (Wh)",
+    "energybalanced": "Energy Balance (Wh)",
+    TOTAL_POWER_KEY: "Total Power (W)",
 }
 
 
 class CannotConnect(Exception):
-    pass
+    """Raised when the SmartPi device is unreachable."""
 
 
 class InvalidAuth(Exception):
-    pass
+    """Raised when the provided credentials are rejected by the device."""
 
 
 async def validate_connection(
     hass: HomeAssistant, data: dict[str, Any]
 ) -> dict[str, Any]:
+    """Verify that HA can reach the SmartPi device and, if given, that credentials are valid.
+
+    Returns a dict with 'serial' and 'name' taken from the livedata response.
+    Raises CannotConnect or InvalidAuth on failure.
+    """
     host = data[CONF_HOST]
     port = data.get(CONF_PORT, DEFAULT_PORT)
     username = data.get(CONF_USERNAME, "")
@@ -104,11 +116,14 @@ async def validate_connection(
 
 
 class SmartPiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle the initial setup flow for a SmartPi device."""
+
     VERSION = 1
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
+        """Show the connection form and validate user input."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
@@ -141,6 +156,7 @@ class SmartPiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_reauth(
         self, entry_data: dict[str, Any]
     ) -> config_entries.ConfigFlowResult:
+        """Initiate re-authentication when the stored credentials become invalid."""
         self._reauth_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
         )
@@ -149,6 +165,7 @@ class SmartPiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
+        """Show the credential form and update the entry on success."""
         errors: dict[str, str] = {}
         entry = self._reauth_entry
 
@@ -187,25 +204,30 @@ class SmartPiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(
         config_entry: config_entries.ConfigEntry,
     ) -> SmartPiOptionsFlow:
+        """Return the options flow handler for this entry."""
         return SmartPiOptionsFlow()
 
 
 class SmartPiOptionsFlow(config_entries.OptionsFlow):
+    """Options flow with three sections: sensor selection, device settings, and AC settings."""
+
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
+        """Show the top-level menu."""
         return self.async_show_menu(
             step_id="init",
             menu_options=["sensors", "grundeinstellungen", "messungen"],
         )
 
     # ------------------------------------------------------------------
-    # Sensor selection
+    # Sensor selection – stored in HA options, triggers integration reload
     # ------------------------------------------------------------------
 
     async def async_step_sensors(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
+        """Let the user choose which measurement types to expose as sensors."""
         if user_input is not None:
             new_options = {
                 **self.config_entry.options,
@@ -238,12 +260,13 @@ class SmartPiOptionsFlow(config_entries.OptionsFlow):
         )
 
     # ------------------------------------------------------------------
-    # Grundeinstellungen (writes to SmartPi, not stored in HA options)
+    # Device settings – written directly to the SmartPi, not stored in HA
     # ------------------------------------------------------------------
 
     async def async_step_grundeinstellungen(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
+        """Edit the SmartPi device name, GPS coordinates, and log level."""
         errors: dict[str, str] = {}
         coordinator = self.hass.data[DOMAIN][self.config_entry.entry_id]
 
@@ -253,7 +276,7 @@ class SmartPiOptionsFlow(config_entries.OptionsFlow):
             except PermissionError:
                 errors["base"] = "no_credentials"
             except Exception:
-                _LOGGER.exception("Failed to write SmartPi Grundeinstellungen")
+                _LOGGER.exception("Failed to write SmartPi device settings")
                 errors["base"] = "write_failed"
             else:
                 return self.async_create_entry(data=dict(self.config_entry.options))
@@ -291,12 +314,13 @@ class SmartPiOptionsFlow(config_entries.OptionsFlow):
         )
 
     # ------------------------------------------------------------------
-    # Messungen – global AC settings (per-phase via entities)
+    # AC measurement settings – written directly to the SmartPi
     # ------------------------------------------------------------------
 
     async def async_step_messungen(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
+        """Edit global AC measurement parameters (frequency, sample rate, integrator)."""
         errors: dict[str, str] = {}
         coordinator = self.hass.data[DOMAIN][self.config_entry.entry_id]
 
@@ -306,7 +330,7 @@ class SmartPiOptionsFlow(config_entries.OptionsFlow):
             except PermissionError:
                 errors["base"] = "no_credentials"
             except Exception:
-                _LOGGER.exception("Failed to write SmartPi Messungen")
+                _LOGGER.exception("Failed to write SmartPi AC settings")
                 errors["base"] = "write_failed"
             else:
                 return self.async_create_entry(data=dict(self.config_entry.options))

@@ -1,3 +1,10 @@
+"""Select platform for the SmartPi integration.
+
+Exposes per-phase enum-type configuration values (e.g. current transformer
+model) as select entities. All entities are disabled by default.
+Changes are written directly to the SmartPi device via the AC config API.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -17,14 +24,17 @@ _LOGGER = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class SmartPiSelectDescription(SelectEntityDescription):
+    """Extends SelectEntityDescription with AC config metadata and the allowed options."""
+
     ac_config_key: str = ""
     options_list: list[str] = field(default_factory=list)
 
 
+# Select entities created for all four phases (1–4)
 _PHASE_SELECTS: list[SmartPiSelectDescription] = [
     SmartPiSelectDescription(
         key="ct_type",
-        name="Stromwandler-Typ",
+        name="Current Transformer Type",
         ac_config_key="CTType",
         options_list=CT_TYPES,
         entity_registry_enabled_default=False,
@@ -37,8 +47,10 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
+    """Create select entities for all phases if AC configuration is available."""
     coordinator: SmartPiCoordinator = hass.data[DOMAIN][entry.entry_id]
 
+    # Select entities require credentials; skip setup if config could not be loaded
     if not coordinator._ac_config:
         return
 
@@ -52,6 +64,8 @@ async def async_setup_entry(
 
 
 class SmartPiSelectEntity(SelectEntity):
+    """A SmartPi AC configuration enum exposed as a HA select entity."""
+
     _attr_has_entity_name = True
     _attr_entity_registry_enabled_default = False
 
@@ -72,7 +86,8 @@ class SmartPiSelectEntity(SelectEntity):
             description.entity_registry_enabled_default
         )
 
-        # Build options list, adding current value if unknown
+        # Include the current device value in the options list even if it is
+        # not part of the known CT_TYPES (e.g. a custom or newer model).
         current = (
             coordinator._ac_config.get(description.ac_config_key, {}).get(
                 str(phase), ""
@@ -99,15 +114,18 @@ class SmartPiSelectEntity(SelectEntity):
 
     @property
     def available(self) -> bool:
+        """Entity is only available when the AC configuration has been loaded."""
         return bool(self._coordinator._ac_config)
 
     @property
     def current_option(self) -> str | None:
+        """Return the currently selected option from the cached AC configuration."""
         return self._coordinator._ac_config.get(
             self.entity_description.ac_config_key, {}
         ).get(str(self._phase))
 
     async def async_select_option(self, option: str) -> None:
+        """Write the selected CT type to the SmartPi device."""
         await self._coordinator.async_set_ac_config_phase_value(
             self.entity_description.ac_config_key, self._phase, option
         )

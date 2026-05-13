@@ -1,3 +1,9 @@
+"""Sensor platform for the SmartPi integration.
+
+Creates one SensorEntity per enabled (phase, measurement_type) combination.
+All sensors are read-only and updated by the SmartPiCoordinator.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -29,13 +35,17 @@ _LOGGER = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class SmartPiSensorEntityDescription(SensorEntityDescription):
+    """Extends SensorEntityDescription with a display label used in the entity name."""
+
     value_label: str = ""
 
 
+# Static description for every supported measurement type.
+# The phase number is added dynamically when entities are instantiated.
 SENSOR_DESCRIPTIONS: dict[str, SmartPiSensorEntityDescription] = {
     "current": SmartPiSensorEntityDescription(
         key="current",
-        value_label="Strom",
+        value_label="Current",
         native_unit_of_measurement="A",
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
@@ -43,7 +53,7 @@ SENSOR_DESCRIPTIONS: dict[str, SmartPiSensorEntityDescription] = {
     ),
     "voltage": SmartPiSensorEntityDescription(
         key="voltage",
-        value_label="Spannung",
+        value_label="Voltage",
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -51,7 +61,7 @@ SENSOR_DESCRIPTIONS: dict[str, SmartPiSensorEntityDescription] = {
     ),
     "power": SmartPiSensorEntityDescription(
         key="power",
-        value_label="Wirkleistung",
+        value_label="Active Power",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
@@ -59,7 +69,7 @@ SENSOR_DESCRIPTIONS: dict[str, SmartPiSensorEntityDescription] = {
     ),
     "cosphi": SmartPiSensorEntityDescription(
         key="cosphi",
-        value_label="Leistungsfaktor",
+        value_label="Power Factor",
         native_unit_of_measurement=None,
         device_class=SensorDeviceClass.POWER_FACTOR,
         state_class=SensorStateClass.MEASUREMENT,
@@ -67,7 +77,7 @@ SENSOR_DESCRIPTIONS: dict[str, SmartPiSensorEntityDescription] = {
     ),
     "frequency": SmartPiSensorEntityDescription(
         key="frequency",
-        value_label="Frequenz",
+        value_label="Frequency",
         native_unit_of_measurement="Hz",
         device_class=SensorDeviceClass.FREQUENCY,
         state_class=SensorStateClass.MEASUREMENT,
@@ -75,7 +85,7 @@ SENSOR_DESCRIPTIONS: dict[str, SmartPiSensorEntityDescription] = {
     ),
     "energyconsumed": SmartPiSensorEntityDescription(
         key="energyconsumed",
-        value_label="Bezogene Energie",
+        value_label="Energy Consumed",
         native_unit_of_measurement="Wh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.MEASUREMENT,
@@ -83,7 +93,7 @@ SENSOR_DESCRIPTIONS: dict[str, SmartPiSensorEntityDescription] = {
     ),
     "energyproduced": SmartPiSensorEntityDescription(
         key="energyproduced",
-        value_label="Eingespeiste Energie",
+        value_label="Energy Produced",
         native_unit_of_measurement="Wh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.MEASUREMENT,
@@ -91,7 +101,7 @@ SENSOR_DESCRIPTIONS: dict[str, SmartPiSensorEntityDescription] = {
     ),
     "energybalanced": SmartPiSensorEntityDescription(
         key="energybalanced",
-        value_label="Bilanzierte Energie",
+        value_label="Energy Balance",
         native_unit_of_measurement="Wh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.MEASUREMENT,
@@ -99,7 +109,7 @@ SENSOR_DESCRIPTIONS: dict[str, SmartPiSensorEntityDescription] = {
     ),
     TOTAL_POWER_KEY: SmartPiSensorEntityDescription(
         key=TOTAL_POWER_KEY,
-        value_label="Gesamtleistung",
+        value_label="Total Power",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
@@ -113,6 +123,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
+    """Create SmartPiSensor entities for all enabled (phase, measurement_type) pairs."""
     coordinator: SmartPiCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     enabled = set(
@@ -141,6 +152,8 @@ async def async_setup_entry(
 
 
 class SmartPiSensor(CoordinatorEntity[SmartPiCoordinator], SensorEntity):
+    """A single SmartPi measurement value exposed as a HA sensor entity."""
+
     _attr_has_entity_name = True
 
     def __init__(
@@ -161,12 +174,14 @@ class SmartPiSensor(CoordinatorEntity[SmartPiCoordinator], SensorEntity):
 
     @property
     def name(self) -> str:
+        """Return the entity name, prefixed with the phase name for per-phase sensors."""
         if self._phase_num == 0:
             return self.entity_description.value_label
         return f"{self._phase_name.title()} {self.entity_description.value_label}"
 
     @property
     def device_info(self) -> DeviceInfo:
+        """Return device registry information so all sensors share one device entry."""
         info = self.coordinator.device_info
         return DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.serial)},
@@ -182,6 +197,7 @@ class SmartPiSensor(CoordinatorEntity[SmartPiCoordinator], SensorEntity):
 
     @property
     def native_value(self) -> float | None:
+        """Return the current measurement value from the coordinator data cache."""
         entry: dict[str, Any] | None = self.coordinator.data.get(
             (self._phase_num, self.entity_description.key)
         )

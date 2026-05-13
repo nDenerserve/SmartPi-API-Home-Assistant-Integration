@@ -1,3 +1,11 @@
+"""Number platform for the SmartPi integration.
+
+Exposes per-phase calibration and configuration values as editable number
+entities. All entities are disabled by default and only visible in the
+device's entity list after the user enables them explicitly.
+Changes are written directly to the SmartPi device via the AC config API.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -24,16 +32,18 @@ _LOGGER = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class SmartPiNumberDescription(NumberEntityDescription):
+    """Extends NumberEntityDescription with SmartPi-specific AC config metadata."""
+
     ac_config_key: str = ""
     phase: int | None = None  # None = global (not per-phase)
-    config_type: str = "ac"  # "ac" or "main"
+    config_type: str = "ac"   # "ac" or "main"
 
 
-# Per-phase number entities (phase 1-4)
+# Number entities created for all four phases (1–4)
 _PHASE_NUMBERS: list[SmartPiNumberDescription] = [
     SmartPiNumberDescription(
         key="calibration_i",
-        name="Kalibrierungsfaktor Strom",
+        name="Current Calibration Factor",
         ac_config_key="CalibrationfactorI",
         native_min_value=0.1,
         native_max_value=10.0,
@@ -43,7 +53,7 @@ _PHASE_NUMBERS: list[SmartPiNumberDescription] = [
     ),
     SmartPiNumberDescription(
         key="ct_primary_current",
-        name="CT Primärstrom",
+        name="CT Primary Current",
         ac_config_key="CTTypePrimaryCurrent",
         native_min_value=1,
         native_max_value=9999,
@@ -54,7 +64,7 @@ _PHASE_NUMBERS: list[SmartPiNumberDescription] = [
     ),
     SmartPiNumberDescription(
         key="gui_max_current",
-        name="Anzeige Maximalstrom",
+        name="GUI Maximum Current",
         ac_config_key="GUIMaxCurrent",
         native_min_value=1,
         native_max_value=9999,
@@ -65,11 +75,11 @@ _PHASE_NUMBERS: list[SmartPiNumberDescription] = [
     ),
 ]
 
-# Phase 1-3 only (no neutral)
+# Number entities created only for phases 1–3 (voltage phases; phase 4 is neutral)
 _PHASE_123_NUMBERS: list[SmartPiNumberDescription] = [
     SmartPiNumberDescription(
         key="voltage_ref",
-        name="Referenzspannung",
+        name="Reference Voltage",
         ac_config_key="Voltage",
         native_min_value=1,
         native_max_value=500,
@@ -81,7 +91,7 @@ _PHASE_123_NUMBERS: list[SmartPiNumberDescription] = [
     ),
     SmartPiNumberDescription(
         key="calibration_u",
-        name="Kalibrierungsfaktor Spannung",
+        name="Voltage Calibration Factor",
         ac_config_key="CalibrationfactorU",
         native_min_value=0.1,
         native_max_value=10.0,
@@ -97,8 +107,10 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
+    """Create number entities for all phases if AC configuration is available."""
     coordinator: SmartPiCoordinator = hass.data[DOMAIN][entry.entry_id]
 
+    # Number entities require credentials; skip setup if config could not be loaded
     if not coordinator._ac_config:
         return
 
@@ -120,6 +132,8 @@ async def async_setup_entry(
 
 
 class SmartPiNumberEntity(NumberEntity):
+    """An editable number entity backed by a SmartPi per-phase AC configuration value."""
+
     _attr_has_entity_name = True
     _attr_entity_registry_enabled_default = False
 
@@ -136,7 +150,6 @@ class SmartPiNumberEntity(NumberEntity):
         self._attr_unique_id = (
             f"{coordinator.serial}_cfg_{description.key}_phase{phase}"
         )
-        # Apply description attributes
         self._attr_native_min_value = description.native_min_value
         self._attr_native_max_value = description.native_max_value
         self._attr_native_step = description.native_step
@@ -167,10 +180,12 @@ class SmartPiNumberEntity(NumberEntity):
 
     @property
     def available(self) -> bool:
+        """Entity is only available when the AC configuration has been loaded."""
         return bool(self._coordinator._ac_config)
 
     @property
     def native_value(self) -> float | None:
+        """Return the current value from the cached AC configuration."""
         phase_dict = self._coordinator._ac_config.get(
             self.entity_description.ac_config_key, {}
         )
@@ -183,6 +198,7 @@ class SmartPiNumberEntity(NumberEntity):
             return None
 
     async def async_set_native_value(self, value: float) -> None:
+        """Write the new value to the SmartPi device and update the local cache."""
         await self._coordinator.async_set_ac_config_phase_value(
             self.entity_description.ac_config_key, self._phase, value
         )

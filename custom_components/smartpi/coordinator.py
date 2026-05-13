@@ -1,3 +1,11 @@
+"""DataUpdateCoordinator for the SmartPi integration.
+
+Handles all HTTP communication with the SmartPi device:
+- Periodic live-data polling (livedata + livepower endpoints)
+- JWT-based authentication with automatic token refresh
+- Read/write access to the device's main and AC configuration
+"""
+
 from __future__ import annotations
 
 import logging
@@ -31,7 +39,14 @@ _TIMEOUT = aiohttp.ClientTimeout(total=10)
 
 
 class SmartPiCoordinator(DataUpdateCoordinator[dict[tuple[int, str], dict[str, Any]]]):
+    """Coordinator that polls the SmartPi device and exposes its data to entities.
+
+    The coordinator data dict is keyed by (phase_number, measurement_type).
+    Phase 0 is used for global values (e.g. total power).
+    """
+
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+        """Initialise the coordinator with connection parameters from the config entry."""
         super().__init__(
             hass,
             _LOGGER,
@@ -51,6 +66,7 @@ class SmartPiCoordinator(DataUpdateCoordinator[dict[tuple[int, str], dict[str, A
 
     @property
     def base_url(self) -> str:
+        """Base HTTP URL of the SmartPi device."""
         return f"http://{self._host}:{self._port}"
 
     # ------------------------------------------------------------------
@@ -58,6 +74,7 @@ class SmartPiCoordinator(DataUpdateCoordinator[dict[tuple[int, str], dict[str, A
     # ------------------------------------------------------------------
 
     async def _authenticate(self) -> bool:
+        """Obtain a JWT from the SmartPi login endpoint and store it in self._token."""
         if not self._username or not self._password:
             return False
         session = async_get_clientsession(self.hass)
@@ -80,6 +97,7 @@ class SmartPiCoordinator(DataUpdateCoordinator[dict[tuple[int, str], dict[str, A
             return False
 
     async def _auth_headers(self) -> dict[str, str]:
+        """Return Authorization headers, authenticating first if no token is cached."""
         if not self._token:
             await self._authenticate()
         return {"Authorization": f"Bearer {self._token}"} if self._token else {}
@@ -89,6 +107,12 @@ class SmartPiCoordinator(DataUpdateCoordinator[dict[tuple[int, str], dict[str, A
     # ------------------------------------------------------------------
 
     async def _async_update_data(self) -> dict[tuple[int, str], dict[str, Any]]:
+        """Fetch live measurements from the SmartPi device.
+
+        Called by the coordinator on every poll interval. Fetches both the
+        per-phase livedata and the aggregated total-power value, then returns
+        a unified dict keyed by (phase, measurement_type).
+        """
         session = async_get_clientsession(self.hass)
         try:
             async with session.get(
@@ -125,12 +149,15 @@ class SmartPiCoordinator(DataUpdateCoordinator[dict[tuple[int, str], dict[str, A
                         "phase_name": "total",
                         "type": TOTAL_POWER_KEY,
                     }
-        except aiohttp.ClientError as err:
+        except (aiohttp.ClientError, ValueError) as err:
+            # ValueError covers json.JSONDecodeError when the reverse proxy
+            # returns an HTML page instead of JSON for this endpoint.
             _LOGGER.debug("Could not fetch livepower: %s", err)
 
         return result
 
     def _parse_livedata(self, raw: dict) -> dict[tuple[int, str], dict[str, Any]]:
+        """Extract per-phase measurement values from the livedata API response."""
         result: dict[tuple[int, str], dict[str, Any]] = {}
         datasets = raw.get("datasets", [])
         if not datasets:
@@ -153,11 +180,16 @@ class SmartPiCoordinator(DataUpdateCoordinator[dict[tuple[int, str], dict[str, A
         return result
 
     # ------------------------------------------------------------------
-    # SmartPi configuration (Grundeinstellungen + Messungen)
+    # SmartPi configuration (main settings + AC measurements)
     # ------------------------------------------------------------------
 
     async def async_load_config(self) -> None:
-        """Load both configs from SmartPi. Called once during setup."""
+        """Load both AC and main configuration from SmartPi.
+
+        Called once during entry setup. Configuration values are cached in
+        _ac_config and _main_config to avoid repeated API calls from entities.
+        Skipped silently when no credentials are provided.
+        """
         if not self._username or not self._password:
             return
         try:
@@ -167,6 +199,7 @@ class SmartPiCoordinator(DataUpdateCoordinator[dict[tuple[int, str], dict[str, A
             _LOGGER.warning("Could not load SmartPi configuration: %s", err)
 
     async def _fetch_config(self, path: str) -> dict[str, Any]:
+        """GET a configuration endpoint, retrying once on 401 (token expired)."""
         headers = await self._auth_headers()
         if not headers:
             return {}
@@ -175,6 +208,7 @@ class SmartPiCoordinator(DataUpdateCoordinator[dict[tuple[int, str], dict[str, A
             f"{self.base_url}{path}", headers=headers, timeout=_TIMEOUT
         ) as resp:
             if resp.status == 401:
+                # Token has expired — re-authenticate and retry once
                 self._token = None
                 headers = await self._auth_headers()
                 async with session.get(
@@ -186,6 +220,7 @@ class SmartPiCoordinator(DataUpdateCoordinator[dict[tuple[int, str], dict[str, A
             return await resp.json(content_type=None)
 
     async def _write_config(self, path: str, config_type: str, config: dict) -> None:
+        """POST a configuration update, retrying once on 401 (token expired)."""
         headers = await self._auth_headers()
         if not headers:
             raise PermissionError("No credentials configured")
@@ -207,36 +242,46 @@ class SmartPiCoordinator(DataUpdateCoordinator[dict[tuple[int, str], dict[str, A
             else:
                 resp.raise_for_status()
 
-    # AC config (Messungen)
+    # AC configuration (per-phase measurement settings)
 
     async def async_get_ac_config(self) -> dict[str, Any]:
+        """Fetch the current AC configuration from the device (not the cache)."""
         return await self._fetch_config(API_AC_CONFIG_READ)
 
     async def async_write_ac_config(self) -> None:
+        """Write the cached AC configuration back to the device."""
         await self._write_config(API_AC_CONFIG_WRITE, "smartpiacconfig", self._ac_config)
 
     async def async_set_ac_config_value(self, key: str, value: Any) -> None:
+        """Update a global AC configuration key and persist to the device."""
         self._ac_config[key] = value
         await self.async_write_ac_config()
 
     async def async_set_ac_config_phase_value(
         self, key: str, phase: int, value: Any
     ) -> None:
+        """Update a per-phase AC configuration value and persist to the device."""
         self._ac_config.setdefault(key, {})[str(phase)] = value
         await self.async_write_ac_config()
 
-    # Main config (Grundeinstellungen)
+    # Main configuration (device name, location, logging)
 
     async def async_get_main_config(self) -> dict[str, Any]:
+        """Fetch the current main configuration from the device (not the cache)."""
         return await self._fetch_config(API_MAIN_CONFIG_READ)
 
     async def async_write_main_config(self) -> None:
+        """Write the cached main configuration back to the device."""
         await self._write_config(
             API_MAIN_CONFIG_WRITE, "smartpiconfig", self._main_config
         )
 
     async def async_set_main_config_fields(self, fields: dict[str, Any]) -> None:
-        """Update selected fields in main config and write to SmartPi."""
+        """Update selected fields in main config and write to SmartPi.
+
+        Only the keys present in *fields* are updated; all other settings
+        already stored on the device are preserved.
+        """
         config = await self.async_get_main_config()
         key_map = {
             "name": "Name",
@@ -251,7 +296,11 @@ class SmartPiCoordinator(DataUpdateCoordinator[dict[tuple[int, str], dict[str, A
         await self._write_config(API_MAIN_CONFIG_WRITE, "smartpiconfig", config)
 
     async def async_set_ac_config_fields(self, fields: dict[str, Any]) -> None:
-        """Update global AC fields and write to SmartPi."""
+        """Update global AC measurement fields and write to SmartPi.
+
+        Only the keys present in *fields* are updated; all other settings
+        already stored on the device are preserved.
+        """
         config = await self.async_get_ac_config()
         key_map = {
             "powerfrequency": "PowerFrequency",

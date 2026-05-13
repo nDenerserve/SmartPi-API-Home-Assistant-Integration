@@ -1,3 +1,9 @@
+"""SmartPi integration for Home Assistant.
+
+Registers the SmartPi AC energy meter as a config entry and sets up all
+supported platforms (sensor, number, switch, select).
+"""
+
 from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
@@ -16,6 +22,12 @@ PLATFORMS = [
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up SmartPi from a config entry.
+
+    Creates the coordinator, performs the first data refresh, loads the device
+    configuration (requires credentials), stores the coordinator in hass.data,
+    and forwards the entry to all supported platforms.
+    """
     coordinator = SmartPiCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
 
@@ -35,6 +47,7 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload a SmartPi config entry and clean up hass.data."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)

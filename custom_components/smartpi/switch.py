@@ -1,3 +1,10 @@
+"""Switch platform for the SmartPi integration.
+
+Exposes per-phase measurement enable/disable toggles as switch entities.
+All entities are disabled by default.
+Changes are written directly to the SmartPi device via the AC config API.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -17,28 +24,32 @@ _LOGGER = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class SmartPiSwitchDescription(SwitchEntityDescription):
+    """Extends SwitchEntityDescription with the AC config key it controls."""
+
     ac_config_key: str = ""
 
 
+# Switch entities created for all four phases (1–4)
 _PHASE_SWITCHES: list[SmartPiSwitchDescription] = [
     SmartPiSwitchDescription(
         key="measure_current",
-        name="Strom messen",
+        name="Measure Current",
         ac_config_key="MeasureCurrent",
         entity_registry_enabled_default=False,
     ),
     SmartPiSwitchDescription(
         key="current_direction",
-        name="Stromrichtung umkehren",
+        name="Invert Current Direction",
         ac_config_key="CurrentDirection",
         entity_registry_enabled_default=False,
     ),
 ]
 
+# Switch entities created only for phases 1–3 (voltage phases; phase 4 is neutral)
 _PHASE_123_SWITCHES: list[SmartPiSwitchDescription] = [
     SmartPiSwitchDescription(
         key="measure_voltage",
-        name="Spannung messen",
+        name="Measure Voltage",
         ac_config_key="MeasureVoltage",
         entity_registry_enabled_default=False,
     ),
@@ -50,8 +61,10 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
+    """Create switch entities for all phases if AC configuration is available."""
     coordinator: SmartPiCoordinator = hass.data[DOMAIN][entry.entry_id]
 
+    # Switch entities require credentials; skip setup if config could not be loaded
     if not coordinator._ac_config:
         return
 
@@ -69,6 +82,8 @@ async def async_setup_entry(
 
 
 class SmartPiSwitchEntity(SwitchEntity):
+    """A boolean SmartPi AC configuration flag exposed as a HA switch."""
+
     _attr_has_entity_name = True
     _attr_entity_registry_enabled_default = False
 
@@ -105,10 +120,12 @@ class SmartPiSwitchEntity(SwitchEntity):
 
     @property
     def available(self) -> bool:
+        """Entity is only available when the AC configuration has been loaded."""
         return bool(self._coordinator._ac_config)
 
     @property
     def is_on(self) -> bool | None:
+        """Return the current boolean value from the cached AC configuration."""
         phase_dict = self._coordinator._ac_config.get(
             self.entity_description.ac_config_key, {}
         )
@@ -118,12 +135,14 @@ class SmartPiSwitchEntity(SwitchEntity):
         return bool(val)
 
     async def async_turn_on(self, **kwargs) -> None:
+        """Enable this measurement channel on the SmartPi device."""
         await self._coordinator.async_set_ac_config_phase_value(
             self.entity_description.ac_config_key, self._phase, True
         )
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs) -> None:
+        """Disable this measurement channel on the SmartPi device."""
         await self._coordinator.async_set_ac_config_phase_value(
             self.entity_description.ac_config_key, self._phase, False
         )
